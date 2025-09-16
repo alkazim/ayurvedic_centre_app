@@ -19,46 +19,60 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final TextEditingController discountController = TextEditingController();
   final TextEditingController advanceController = TextEditingController();
   final TextEditingController balanceController = TextEditingController();
-  
+
   String selectedLocation = 'Choose your location';
   String selectedBranch = 'Select the branch';
   String selectedTreatment = 'Choose preferred treatment';
   String paymentMethod = '';
   DateTime? treatmentDate;
   TimeOfDay? treatmentTime;
-  
+
   bool _isLoading = false;
   bool _isLoadingBranches = false;
   bool _isLoadingTreatments = false;
-  
+
   // ⚡ API Data Lists
   List<Branch> _branches = [];
   List<Treatment> _apiTreatments = [];
   Branch? _selectedBranch;
   Treatment? _selectedApiTreatment;
-  
+
   // Time slot options (keep this static)
   final List<String> _timeSlots = [
-    '09:00 AM', '09:30 AM', '10:00 AM', '10:30 AM',
-    '11:00 AM', '11:30 AM', '12:00 PM', '12:30 PM',
-    '02:00 PM', '02:30 PM', '03:00 PM', '03:30 PM',
-    '04:00 PM', '04:30 PM', '05:00 PM', '05:30 PM', '06:00 PM',
+    '09:00 AM',
+    '09:30 AM',
+    '10:00 AM',
+    '10:30 AM',
+    '11:00 AM',
+    '11:30 AM',
+    '12:00 PM',
+    '12:30 PM',
+    '02:00 PM',
+    '02:30 PM',
+    '03:00 PM',
+    '03:30 PM',
+    '04:00 PM',
+    '04:30 PM',
+    '05:00 PM',
+    '05:30 PM',
+    '06:00 PM',
   ];
-  
+
   List<PatientTreatment> treatments = [];
   final ApiService _apiService = ApiService();
 
   @override
   void initState() {
     super.initState();
-    
+
     // ⚡ Load API data on init
     _loadBranches();
     _loadTreatments();
-    
+
     // Get treatment from navigation arguments if available
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final String? treatmentFromHome = ModalRoute.of(context)?.settings.arguments as String?;
+      final String? treatmentFromHome =
+          ModalRoute.of(context)?.settings.arguments as String?;
       if (treatmentFromHome != null) {
         // Find matching treatment from API
         _findAndAddTreatmentFromHome(treatmentFromHome);
@@ -75,7 +89,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     setState(() {
       _isLoadingBranches = true;
     });
-    
+
     try {
       print('🔄 Loading branches from API...');
       List<Branch> branches = await _apiService.getBranches();
@@ -103,7 +117,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     setState(() {
       _isLoadingTreatments = true;
     });
-    
+
     try {
       print('🔄 Loading treatments from API...');
       List<Treatment> apiTreatments = await _apiService.getTreatments();
@@ -135,18 +149,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
       });
       return;
     }
-    
-    var matchingTreatments = _apiTreatments.where((t) => t.name == treatmentName);
-    
+
+    var matchingTreatments = _apiTreatments.where(
+      (t) => t.name == treatmentName,
+    );
+
     if (matchingTreatments.isNotEmpty) {
       Treatment selectedTreatment = matchingTreatments.first;
       setState(() {
-        treatments = [PatientTreatment(
-          name: selectedTreatment.name,
-          price: selectedTreatment.price.toInt(),
-          maleCount: 1,
-          femaleCount: 1
-        )];
+        treatments = [
+          PatientTreatment(
+            name: selectedTreatment.name,
+            price: selectedTreatment.price.toInt(),
+            maleCount: 1,
+            femaleCount: 1,
+          ),
+        ];
         _calculateTotalAmount();
       });
     }
@@ -172,7 +190,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     for (PatientTreatment treatment in treatments) {
       total += treatment.price * (treatment.maleCount + treatment.femaleCount);
     }
-    
+
     setState(() {
       totalAmountController.text = total.toStringAsFixed(0);
     });
@@ -184,13 +202,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
     double totalAmount = double.tryParse(totalAmountController.text) ?? 0;
     double discountAmount = double.tryParse(discountController.text) ?? 0;
     double advanceAmount = double.tryParse(advanceController.text) ?? 0;
-    
+
     double balanceAmount = (totalAmount - discountAmount) - advanceAmount;
-    
+
     if (balanceAmount < 0) {
       balanceAmount = 0;
     }
-    
+
     setState(() {
       balanceController.text = balanceAmount.toStringAsFixed(0);
     });
@@ -206,7 +224,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (totalAmountController.text.trim().isEmpty) return false;
     if (paymentMethod.isEmpty) return false;
     if (treatmentDate == null) return false;
-    
+
     return true;
   }
 
@@ -216,7 +234,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           title: Row(
             children: [
               Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 28),
@@ -268,7 +288,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           title: Text(
             'Select Branch',
             style: TextStyle(
@@ -281,7 +303,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
             width: double.maxFinite,
             height: 300,
             child: _isLoadingBranches
-                ? Center(child: CircularProgressIndicator(color: Color(0xFF006837)))
+                ? Center(
+                    child: CircularProgressIndicator(color: Color(0xFF006837)),
+                  )
                 : ListView.builder(
                     shrinkWrap: true,
                     itemCount: _branches.length,
@@ -290,7 +314,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       return ListTile(
                         leading: Icon(Icons.business, color: Color(0xFF006837)),
                         title: Text(branch.name),
-                        subtitle: branch.location.isNotEmpty ? Text(branch.location) : null,
+                        subtitle: branch.location.isNotEmpty
+                            ? Text(branch.location)
+                            : null,
                         onTap: () {
                           setState(() {
                             _selectedBranch = branch;
@@ -313,7 +339,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           title: Text(
             'Select Time Slot',
             style: TextStyle(
@@ -341,13 +369,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     List<String> timeParts = parts[0].split(':');
                     int hour = int.parse(timeParts[0]);
                     int minute = int.parse(timeParts[1]);
-                    
+
                     if (parts[1] == 'PM' && hour != 12) {
                       hour += 12;
                     } else if (parts[1] == 'AM' && hour == 12) {
                       hour = 0;
                     }
-                    
+
                     setState(() {
                       treatmentTime = TimeOfDay(hour: hour, minute: minute);
                     });
@@ -391,20 +419,42 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     try {
       final patientProvider = context.read<PatientProvider>();
-      
+
       String treatmentString = treatments.map((t) => t.name).join(', ');
-      int totalMale = treatments.fold(0, (sum, treatment) => sum + treatment.maleCount);
-      int totalFemale = treatments.fold(0, (sum, treatment) => sum + treatment.femaleCount);
-      
+      int totalMale = treatments.fold(
+        0,
+        (sum, treatment) => sum + treatment.maleCount,
+      );
+      int totalFemale = treatments.fold(
+        0,
+        (sum, treatment) => sum + treatment.femaleCount,
+      );
+
+      // ⚡ Fixed date formatting - use simple format that server expects
       String formattedDateTime = '';
       if (treatmentDate != null) {
-        formattedDateTime = '${treatmentDate!.year}-${treatmentDate!.month.toString().padLeft(2, '0')}-${treatmentDate!.day.toString().padLeft(2, '0')}';
+        String timeString = '11:00 AM'; // Default time
         if (treatmentTime != null) {
-          formattedDateTime += 'T${treatmentTime!.hour.toString().padLeft(2, '0')}:${treatmentTime!.minute.toString().padLeft(2, '0')}:00';
-        } else {
-          formattedDateTime += 'T10:00:00';
+          int hour = treatmentTime!.hour;
+          int minute = treatmentTime!.minute;
+          String period = hour >= 12 ? 'PM' : 'AM';
+          if (hour > 12) hour -= 12;
+          if (hour == 0) hour = 12;
+          timeString =
+              '${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')} $period';
         }
+
+        formattedDateTime =
+            '${treatmentDate!.day}/${treatmentDate!.month}/${treatmentDate!.year}-$timeString';
       }
+
+      // ⚡ Get branch name correctly (not ID)
+      String branchName = _selectedBranch?.name ?? selectedBranch;
+
+      print('🔄 Preparing patient data...');
+      print('📝 Branch name: $branchName');
+      print('📝 Treatments: $treatmentString');
+      print('📝 Date/Time: $formattedDateTime');
 
       bool success = await patientProvider.addPatient(
         name: nameController.text.trim(),
@@ -419,7 +469,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         dateNdTime: formattedDateTime,
         male: totalMale.toString(),
         female: totalFemale.toString(),
-        branch: selectedBranch,
+        branch: branchName, // ⚡ Use branch name, not ID
         treatments: treatmentString,
       );
 
@@ -430,13 +480,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
               children: [
                 Icon(Icons.check_circle, color: Colors.white),
                 SizedBox(width: 12),
-                Text('Patient registered successfully!', style: TextStyle(fontSize: 16)),
+                Text(
+                  'Patient registered successfully!',
+                  style: TextStyle(fontSize: 16),
+                ),
               ],
             ),
             backgroundColor: Colors.green,
             duration: Duration(seconds: 3),
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
           ),
         );
 
@@ -449,13 +504,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
               children: [
                 Icon(Icons.error, color: Colors.white),
                 SizedBox(width: 12),
-                Text('Error occurred, try again', style: TextStyle(fontSize: 16)),
+                Text(
+                  'Error occurred, try again',
+                  style: TextStyle(fontSize: 16),
+                ),
               ],
             ),
             backgroundColor: Colors.red,
             duration: Duration(seconds: 3),
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
           ),
         );
       }
@@ -463,17 +523,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
       print('Error saving patient: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Row(
-            children: [
-              Icon(Icons.error, color: Colors.white),
-              SizedBox(width: 12),
-              Text('Error occurred, try again', style: TextStyle(fontSize: 16)),
-            ],
-          ),
+          content: Text('Error: ${e.toString()}'),
           backgroundColor: Colors.red,
-          duration: Duration(seconds: 3),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         ),
       );
     } finally {
@@ -516,26 +567,57 @@ class _RegisterScreenState extends State<RegisterScreen> {
           children: [
             _buildTextField('Name', 'Enter your full name', nameController),
             const SizedBox(height: 20),
-            _buildTextField('Whatsapp Number', 'Enter your Whatsapp number', whatsappController),
+            _buildTextField(
+              'Whatsapp Number',
+              'Enter your Whatsapp number',
+              whatsappController,
+            ),
             const SizedBox(height: 20),
-            _buildTextField('Address', 'Enter your full address', addressController),
+            _buildTextField(
+              'Address',
+              'Enter your full address',
+              addressController,
+            ),
             const SizedBox(height: 20),
-            
+
             // ⚡ Updated Branch Dropdown
-            _buildDropdownWithLoading('Branch', selectedBranch, _showBranchDialog, _isLoadingBranches),
+            _buildDropdownWithLoading(
+              'Branch',
+              selectedBranch,
+              _showBranchDialog,
+              _isLoadingBranches,
+            ),
             const SizedBox(height: 20),
-            
+
             _buildTreatmentsSection(),
             const SizedBox(height: 20),
-            _buildTextField('Total Amount', 'Auto-calculated', totalAmountController, readOnly: true),
+            _buildTextField(
+              'Total Amount',
+              'Auto-calculated',
+              totalAmountController,
+              readOnly: true,
+            ),
             const SizedBox(height: 20),
-            _buildTextField('Discount Amount', 'Enter discount amount', discountController),
+            _buildTextField(
+              'Discount Amount',
+              'Enter discount amount',
+              discountController,
+            ),
             const SizedBox(height: 20),
             _buildPaymentOptions(),
             const SizedBox(height: 20),
-            _buildTextField('Advance Amount', 'Enter advance amount', advanceController),
+            _buildTextField(
+              'Advance Amount',
+              'Enter advance amount',
+              advanceController,
+            ),
             const SizedBox(height: 20),
-            _buildTextField('Balance Amount', 'Auto-calculated', balanceController, readOnly: true),
+            _buildTextField(
+              'Balance Amount',
+              'Auto-calculated',
+              balanceController,
+              readOnly: true,
+            ),
             const SizedBox(height: 20),
             _buildDatePicker(),
             const SizedBox(height: 20),
@@ -549,7 +631,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   // Updated dropdown with loading indicator
-  Widget _buildDropdownWithLoading(String label, String value, VoidCallback onTap, bool isLoading) {
+  Widget _buildDropdownWithLoading(
+    String label,
+    String value,
+    VoidCallback onTap,
+    bool isLoading,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -577,8 +664,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   child: Text(
                     isLoading ? 'Loading...' : value,
                     style: TextStyle(
-                      color: value.contains('Choose') || value.contains('Select') || isLoading
-                          ? Colors.grey : Colors.black,
+                      color:
+                          value.contains('Choose') ||
+                              value.contains('Select') ||
+                              isLoading
+                          ? Colors.grey
+                          : Colors.black,
                     ),
                   ),
                 ),
@@ -588,10 +679,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         height: 20,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.green),
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Colors.green,
+                          ),
                         ),
                       )
-                    : const Icon(Icons.keyboard_arrow_down, color: Colors.green),
+                    : const Icon(
+                        Icons.keyboard_arrow_down,
+                        color: Colors.green,
+                      ),
               ],
             ),
           ),
@@ -600,7 +696,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  Widget _buildTextField(String label, String hint, TextEditingController controller, {bool readOnly = false}) {
+  Widget _buildTextField(
+    String label,
+    String hint,
+    TextEditingController controller, {
+    bool readOnly = false,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -616,17 +717,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
         TextField(
           controller: controller,
           readOnly: readOnly,
-          keyboardType: label.contains('Amount') ? TextInputType.number : TextInputType.text,
+          keyboardType: label.contains('Amount')
+              ? TextInputType.number
+              : TextInputType.text,
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: TextStyle(color: readOnly ? Colors.grey.shade400 : Colors.grey),
+            hintStyle: TextStyle(
+              color: readOnly ? Colors.grey.shade400 : Colors.grey,
+            ),
             filled: true,
             fillColor: readOnly ? Colors.grey.shade50 : Colors.grey[100],
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
               borderSide: BorderSide.none,
             ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 16,
+            ),
           ),
           style: TextStyle(
             color: readOnly ? Colors.grey.shade700 : Colors.black,
@@ -665,8 +773,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   child: Text(
                     value,
                     style: TextStyle(
-                      color: value.contains('Choose') || value.contains('Select') 
-                          ? Colors.grey : Colors.black,
+                      color:
+                          value.contains('Choose') || value.contains('Select')
+                          ? Colors.grey
+                          : Colors.black,
                     ),
                   ),
                 ),
@@ -709,13 +819,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   children: [
                     Text(
                       '${index + 1}.',
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         treatment.name,
-                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                     GestureDetector(
@@ -731,7 +847,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           color: Colors.red,
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(Icons.close, size: 16, color: Colors.white),
+                        child: const Icon(
+                          Icons.close,
+                          size: 16,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
                   ],
@@ -739,30 +859,47 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 const SizedBox(height: 8),
                 Row(
                   children: [
-                    Text('Price: ₹${treatment.price}', 
-                         style: TextStyle(color: Colors.green.shade700, fontWeight: FontWeight.w500)),
+                    Text(
+                      'Price: ₹${treatment.price}',
+                      style: TextStyle(
+                        color: Colors.green.shade700,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
                     const SizedBox(width: 20),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.green.withOpacity(0.2),
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
                         'Male: ${treatment.maleCount}',
-                        style: TextStyle(color: Colors.green[700], fontSize: 12),
+                        style: TextStyle(
+                          color: Colors.green[700],
+                          fontSize: 12,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 8),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.green.withOpacity(0.2),
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
                         'Female: ${treatment.femaleCount}',
-                        style: TextStyle(color: Colors.green[700], fontSize: 12),
+                        style: TextStyle(
+                          color: Colors.green[700],
+                          fontSize: 12,
+                        ),
                       ),
                     ),
                   ],
@@ -891,7 +1028,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  treatmentDate != null 
+                  treatmentDate != null
                       ? '${treatmentDate!.day}/${treatmentDate!.month}/${treatmentDate!.year}'
                       : 'Select treatment date',
                   style: TextStyle(
@@ -932,7 +1069,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  treatmentTime != null 
+                  treatmentTime != null
                       ? treatmentTime!.format(context)
                       : 'Select treatment time',
                   style: TextStyle(
@@ -956,9 +1093,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.green[700],
           padding: const EdgeInsets.symmetric(vertical: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         ),
         child: _isLoading
             ? Row(
@@ -1035,10 +1170,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         ),
                       ),
                       const SizedBox(height: 20),
-                      
+
                       // ⚡ Updated Treatment Dropdown with API data
+                      // ⚡ ONLY change this dropdown in the _showTreatmentDialog method
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.grey[100],
                           borderRadius: BorderRadius.circular(8),
@@ -1047,7 +1186,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             ? Container(
                                 height: 50,
                                 child: Center(
-                                  child: CircularProgressIndicator(color: Colors.green),
+                                  child: CircularProgressIndicator(
+                                    color: Colors.green,
+                                  ),
                                 ),
                               )
                             : DropdownButtonHideUnderline(
@@ -1058,41 +1199,63 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                     style: TextStyle(color: Colors.grey),
                                   ),
                                   value: selectedApiTreatment,
-                                  icon: Icon(Icons.keyboard_arrow_down, color: Colors.green),
+                                  icon: Icon(
+                                    Icons.keyboard_arrow_down,
+                                    color: Colors.green,
+                                  ),
+                                  // ⚡ FIX: Add maxHeight to prevent overflow
+                                  menuMaxHeight: 200,
                                   onChanged: (Treatment? newValue) {
                                     setStateDialog(() {
                                       selectedApiTreatment = newValue;
                                     });
                                   },
-                                  items: _apiTreatments.map((Treatment treatment) {
+                                  items: _apiTreatments.map((
+                                    Treatment treatment,
+                                  ) {
                                     return DropdownMenuItem<Treatment>(
                                       value: treatment,
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        mainAxisAlignment: MainAxisAlignment.center,
-                                        children: [
-                                          Text(
-                                            treatment.name,
-                                            style: TextStyle(
-                                              fontWeight: FontWeight.w600,
-                                              fontSize: 14,
+                                      child: Container(
+                                        constraints: BoxConstraints(
+                                          maxWidth: 250,
+                                        ), // ⚡ FIX: Add width constraint
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          children: [
+                                            Text(
+                                              treatment.name,
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.w600,
+                                                fontSize: 14,
+                                              ),
+                                              maxLines:
+                                                  1, // ⚡ FIX: Limit to 1 line
+                                              overflow: TextOverflow
+                                                  .ellipsis, // ⚡ FIX: Add ellipsis
                                             ),
-                                          ),
-                                          Text(
-                                            '₹${treatment.price.toInt()} - ${treatment.duration}',
-                                            style: TextStyle(
-                                              color: Colors.green[600],
-                                              fontSize: 12,
+                                            Text(
+                                              '₹${treatment.price.toInt()} - ${treatment.duration}',
+                                              style: TextStyle(
+                                                color: Colors.green[600],
+                                                fontSize: 12,
+                                              ),
+                                              maxLines:
+                                                  1, // ⚡ FIX: Limit to 1 line
+                                              overflow: TextOverflow
+                                                  .ellipsis, // ⚡ FIX: Add ellipsis
                                             ),
-                                          ),
-                                        ],
+                                          ],
+                                        ),
                                       ),
                                     );
                                   }).toList(),
                                 ),
                               ),
                       ),
-                      
+
                       const SizedBox(height: 24),
                       const Text(
                         'Add Patients',
@@ -1118,21 +1281,26 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         width: double.infinity,
                         child: ElevatedButton(
                           onPressed: () {
-                            if (selectedApiTreatment != null && (maleCount > 0 || femaleCount > 0)) {
+                            if (selectedApiTreatment != null &&
+                                (maleCount > 0 || femaleCount > 0)) {
                               setState(() {
-                                treatments.add(PatientTreatment(
-                                  name: selectedApiTreatment!.name,
-                                  price: selectedApiTreatment!.price.toInt(),
-                                  maleCount: maleCount,
-                                  femaleCount: femaleCount,
-                                ));
+                                treatments.add(
+                                  PatientTreatment(
+                                    name: selectedApiTreatment!.name,
+                                    price: selectedApiTreatment!.price.toInt(),
+                                    maleCount: maleCount,
+                                    femaleCount: femaleCount,
+                                  ),
+                                );
                                 _calculateTotalAmount();
                               });
                               Navigator.pop(context);
                             } else {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
-                                  content: Text('Please select treatment and add patients'),
+                                  content: Text(
+                                    'Please select treatment and add patients',
+                                  ),
                                   backgroundColor: Colors.orange,
                                 ),
                               );
@@ -1166,7 +1334,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  Widget _buildPatientCounter(String gender, int count, Function(int) onCountChanged) {
+  Widget _buildPatientCounter(
+    String gender,
+    int count,
+    Function(int) onCountChanged,
+  ) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -1179,10 +1351,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         children: [
           Text(
             gender,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-            ),
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
           ),
           Row(
             children: [
@@ -1207,7 +1376,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
               Container(
                 margin: const EdgeInsets.symmetric(horizontal: 16),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   border: Border.all(color: Colors.grey[300]!),
                   borderRadius: BorderRadius.circular(4),
@@ -1227,11 +1399,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     color: Colors.green,
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(
-                    Icons.add,
-                    color: Colors.white,
-                    size: 20,
-                  ),
+                  child: const Icon(Icons.add, color: Colors.white, size: 20),
                 ),
               ),
             ],

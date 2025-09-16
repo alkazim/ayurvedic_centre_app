@@ -221,71 +221,98 @@ class PatientProvider extends ChangeNotifier {
     _updateFilteredPatients();
     notifyListeners();
   }
-  
-  Future<bool> addPatient({
-    required String name,
-    required String executive,
-    required String payment,
-    required String phone,
-    required String address,
-    required double totalAmount,
-    required double discountAmount,
-    required double advanceAmount,
-    required double balanceAmount,
-    required String dateNdTime,
-    required String male,
-    required String female,
-    required String branch,
-    required String treatments,
-  }) async {
-    try {
-      String cleanDate = '';
-      if (dateNdTime.isNotEmpty) {
-        try {
-          DateTime dt = DateTime.parse(dateNdTime);
-          cleanDate = '${dt.day}/${dt.month}/${dt.year}-${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')} ${dt.hour >= 12 ? "PM" : "AM"}';
-        } catch (e) {
-          DateTime now = DateTime.now();
-          cleanDate = '${now.day}/${now.month}/${now.year}-${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')} ${now.hour >= 12 ? "PM" : "AM"}';
-        }
-      }
-      
-      Map<String, String> patientData = {
-        'id':"",
-        'name': name.trim(),
-        'excecutive': executive.trim(),
-        'payment': payment.trim(),
-        'phone': phone.trim(),
-        'address': address.trim(),
-        'total_amount': totalAmount.toInt().toString(),
-        'discount_amount': discountAmount.toInt().toString(),
-        'advance_amount': advanceAmount.toInt().toString(),
-        'balance_amount': balanceAmount.toInt().toString(),
-        'date_nd_time': cleanDate,
-        'male': male,
-        'female': female,
-        'branch': branch.trim(),
-        'treatments': treatments.trim(),
-      };
-      
-      bool success = await _apiService.addPatient(patientData);
-      
-      if (success) {
-        // ⚡ OPTIMIZED: Only refresh if successful
-        _needsRefresh = true;
-        await fetchPatients(refresh: true);
-        return true;
-      } else {
-        _error = 'Failed to add patient';
-        notifyListeners();
-        return false;
-      }
-    } catch (e) {
-      _error = 'Failed to add patient: ${e.toString()}';
-      notifyListeners();
-      return false;
-    }
+
+  // Add this method to your PatientProvider class
+Future<void> loadPatients() async {
+  try {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    print('🔄 PatientProvider: Loading patients...');
+    
+    List<Patient> patients = await _apiService.getPatients();
+    
+    _allPatients = patients;
+    _needsRefresh = false;
+    _isLoading = false;
+    
+    print('✅ PatientProvider: Loaded ${patients.length} patients');
+    
+    notifyListeners();
+  } catch (e) {
+    _error = 'Failed to load patients: ${e.toString()}';
+    _isLoading = false;
+    print('❌ PatientProvider: Error loading patients - $e');
+    notifyListeners();
   }
+}
+
+  
+Future<bool> addPatient({
+  required String name,
+  required String executive,
+  required String payment,
+  required String phone,
+  required String address,
+  required double totalAmount,
+  required double discountAmount,
+  required double advanceAmount,
+  required double balanceAmount,
+  required String dateNdTime,
+  required String male,
+  required String female,
+  required String branch,
+  required String treatments,
+}) async {
+  try {
+    _error = null;
+    _isLoading = true;
+    notifyListeners();
+
+    // ⚡ Fixed data structure - ensure no field conflicts
+    Map<String, String> patientData = {
+        // Empty string for new patient (NOT the branch name)
+      'name': name,
+      'excecutive': executive, // Note: keeping the typo as server expects it
+      'payment': payment,
+      'phone': phone,
+      'address': address,
+      'total_amount': totalAmount.toString(),
+      'discount_amount': discountAmount.toString(),
+      'advance_amount': advanceAmount.toString(),
+      'balance_amount': balanceAmount.toString(),
+      'date_nd_time': dateNdTime,
+      'male': male,
+      'female': female,
+      'branch': branch,  // This should be branch name, not ID
+      'treatments': treatments,
+    };
+
+    print('🚀 PatientProvider: Sending data to API...');
+    print('📝 Final data structure: $patientData');
+
+    bool success = await _apiService.addPatient(patientData);
+
+    if (success) {
+      _needsRefresh = true; // Refresh patient list
+      await loadPatients(); // Reload patients
+    } else {
+      _error = 'Failed to add patient. Please try again.';
+    }
+
+    _isLoading = false;
+    notifyListeners();
+    return success;
+
+  } catch (e) {
+    _error = 'Error: ${e.toString()}';
+    _isLoading = false;
+    notifyListeners();
+    return false;
+  }
+}
+
   
   Future<void> loadMorePatients() async {
     // Simplified - not needed with current implementation
