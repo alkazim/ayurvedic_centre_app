@@ -1,5 +1,5 @@
-import 'dart:io';
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import '../models/patient_model.dart';
 import '../services/api_service.dart';
@@ -10,32 +10,36 @@ enum SortOrder { ascending, descending }
 class PatientProvider extends ChangeNotifier {
   final ApiService _apiService = ApiService();
   
-  // All patients from API
+  // ⚡ OPTIMIZED: Better state management
   List<Patient> _allPatients = [];
-  
-  // Currently displayed patients (paginated)
-  List<Patient> _displayedPatients = [];
+  List<Patient> _cachedFilteredPatients = []; // Cache filtered results
   
   bool _isLoading = false;
   bool _isLoadingMore = false;
   String? _error;
   String _searchQuery = '';
   
-  // Pagination variables
+  // Pagination
   int _currentPage = 1;
   final int _itemsPerPage = 10;
   bool _hasMore = true;
   
-  // Sorting variables
+  // Sorting
   SortBy _sortBy = SortBy.date;
   SortOrder _sortOrder = SortOrder.descending;
   
-  // Date filtering variables
+  // Date filtering
   DateTime? _selectedDate;
-  DateTimeRange? _selectedDateRange;
+  
+  // ⚡ OPTIMIZED: Debouncing for search
+  Timer? _searchDebouncer;
+  
+  // ⚡ OPTIMIZED: Cache management
+  bool _needsRefresh = true;
   
   // Public getters
-  List<Patient> get patients => _displayedPatients;
+  List<Patient> get patients => _allPatients;
+  List<Patient> get displayedPatients => _cachedFilteredPatients;
   bool get isLoading => _isLoading;
   bool get isLoadingMore => _isLoadingMore;
   String? get error => _error;
@@ -44,65 +48,48 @@ class PatientProvider extends ChangeNotifier {
   SortBy get sortBy => _sortBy;
   SortOrder get sortOrder => _sortOrder;
   DateTime? get selectedDate => _selectedDate;
-  DateTimeRange? get selectedDateRange => _selectedDateRange;
   
-  // Get sort display text
   String get sortDisplayText {
     if (_selectedDate != null) {
       return '${_selectedDate!.day}/${_selectedDate!.month}/${_selectedDate!.year}';
-    } else if (_selectedDateRange != null) {
-      return '${_selectedDateRange!.start.day}/${_selectedDateRange!.start.month} - ${_selectedDateRange!.end.day}/${_selectedDateRange!.end.month}';
     }
     return 'Date';
   }
   
-  // Filtered and sorted patients
-  List<Patient> get filteredPatients {
-    List<Patient> patients = _allPatients;
+  // ⚡ OPTIMIZED: Cached filtered patients with better performance
+  void _updateFilteredPatients() {
+    List<Patient> filtered = List.from(_allPatients);
     
-    // Apply date filter first
+    // Apply date filter
     if (_selectedDate != null) {
-      patients = patients.where((patient) {
+      filtered = filtered.where((patient) {
         DateTime patientDate = _parseDate(patient.dateNdTime);
         return _isSameDate(patientDate, _selectedDate!);
-      }).toList();
-    } else if (_selectedDateRange != null) {
-      patients = patients.where((patient) {
-        DateTime patientDate = _parseDate(patient.dateNdTime);
-        return patientDate.isAfter(_selectedDateRange!.start.subtract(Duration(days: 1))) &&
-               patientDate.isBefore(_selectedDateRange!.end.add(Duration(days: 1)));
       }).toList();
     }
     
     // Apply search filter
     if (_searchQuery.isNotEmpty) {
-      patients = patients.where((patient) => 
-        patient.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-        patient.treatments.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-        patient.branch.toLowerCase().contains(_searchQuery.toLowerCase())
+      String query = _searchQuery.toLowerCase();
+      filtered = filtered.where((patient) => 
+        patient.name.toLowerCase().contains(query) ||
+        patient.treatments.toLowerCase().contains(query) ||
+        patient.branch.toLowerCase().contains(query)
       ).toList();
     }
     
     // Sort patients
-    _sortPatients(patients);
+    _sortPatients(filtered);
     
-    // For search or date filter, return all filtered results
-    if (_searchQuery.isNotEmpty || _selectedDate != null || _selectedDateRange != null) {
-      return patients;
-    }
-    
-    // Otherwise return paginated results
-    return _displayedPatients;
+    _cachedFilteredPatients = filtered;
   }
   
-  // Check if two dates are the same day
   bool _isSameDate(DateTime date1, DateTime date2) {
     return date1.year == date2.year &&
            date1.month == date2.month &&
            date1.day == date2.day;
   }
   
-  // Sort patients
   void _sortPatients(List<Patient> patients) {
     patients.sort((a, b) {
       int comparison = 0;
@@ -113,15 +100,12 @@ class PatientProvider extends ChangeNotifier {
           DateTime dateB = _parseDate(b.dateNdTime);
           comparison = dateA.compareTo(dateB);
           break;
-          
         case SortBy.name:
           comparison = a.name.toLowerCase().compareTo(b.name.toLowerCase());
           break;
-          
         case SortBy.totalAmount:
           comparison = a.totalAmount.compareTo(b.totalAmount);
           break;
-          
         case SortBy.branch:
           comparison = a.branch.toLowerCase().compareTo(b.branch.toLowerCase());
           break;
@@ -131,7 +115,6 @@ class PatientProvider extends ChangeNotifier {
     });
   }
   
-  // Parse date from string
   DateTime _parseDate(String dateString) {
     try {
       if (dateString.isEmpty) return DateTime(1900);
@@ -158,31 +141,66 @@ class PatientProvider extends ChangeNotifier {
     }
   }
   
-  // Filter by specific date
+  // ⚡ OPTIMIZED: Smart fetching with caching
+  Future<void> fetchPatients({bool refresh = false}) async {
+    // Don't fetch if data exists and not refreshing
+    if (_allPatients.isNotEmpty && !refresh && !_needsRefresh) {
+      return;
+    }
+    
+    if (refresh) {
+      _currentPage = 1;
+      _allPatients.clear();
+      _cachedFilteredPatients.clear();
+      _hasMore = true;
+      _needsRefresh = false;
+    }
+    
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+    
+    try {
+      print('⚡ Fetching patients from API...');
+      final stopwatch = Stopwatch()..start();
+      
+      _allPatients = await _apiService.getPatients();
+      _updateFilteredPatients();
+      
+      stopwatch.stop();
+      print('⚡ API call completed in ${stopwatch.elapsedMilliseconds}ms');
+      
+    } catch (e) {
+      _error = e.toString();
+      print('❌ Error fetching patients: $e');
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+  
+  // ⚡ OPTIMIZED: Debounced search
+  void debouncedSearch(String query) {
+    _searchDebouncer?.cancel();
+    _searchDebouncer = Timer(Duration(milliseconds: 300), () {
+      _searchQuery = query;
+      _updateFilteredPatients();
+      notifyListeners();
+    });
+  }
+  
   void filterByDate(DateTime date) {
     _selectedDate = date;
-    _selectedDateRange = null;
-    print('🔄 Filtering by date: ${date.day}/${date.month}/${date.year}');
+    _updateFilteredPatients();
     notifyListeners();
   }
   
-  // Filter by date range
-  void filterByDateRange(DateTimeRange dateRange) {
-    _selectedDateRange = dateRange;
-    _selectedDate = null;
-    print('🔄 Filtering by date range: ${dateRange.start} to ${dateRange.end}');
-    notifyListeners();
-  }
-  
-  // Clear date filter
   void clearDateFilter() {
     _selectedDate = null;
-    _selectedDateRange = null;
-    print('🔄 Cleared date filter');
+    _updateFilteredPatients();
     notifyListeners();
   }
   
-  // Update sort criteria
   void updateSort(SortBy newSortBy) {
     if (_sortBy == newSortBy) {
       _sortOrder = _sortOrder == SortOrder.ascending 
@@ -193,93 +211,84 @@ class PatientProvider extends ChangeNotifier {
       _sortOrder = SortOrder.descending;
     }
     
-    _sortPatients(_allPatients);
-    _currentPage = 1;
-    _displayedPatients.clear();
-    _paginateLocally();
-    
+    _updateFilteredPatients();
     notifyListeners();
   }
   
-  // Fetch patients from API
-  Future<void> fetchPatients({bool refresh = false}) async {
-    if (refresh) {
-      _currentPage = 1;
-      _displayedPatients.clear();
-      _allPatients.clear();
-      _hasMore = true;
-    }
-    
-    if (_allPatients.isNotEmpty && !refresh) {
-      _paginateLocally();
-      return;
-    }
-    
-    _isLoading = true;
-    _error = null;
-    notifyListeners();
-    
-    try {
-      _allPatients = await _apiService.getPatients();
-      _sortPatients(_allPatients);
-      _paginateLocally();
-    } catch (e) {
-      _error = e.toString();
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
-  }
-  
-  // Paginate locally
-  void _paginateLocally() {
-    int startIndex = (_currentPage - 1) * _itemsPerPage;
-    int endIndex = startIndex + _itemsPerPage;
-    
-    if (startIndex >= _allPatients.length) {
-      _hasMore = false;
-      return;
-    }
-    
-    List<Patient> newItems = _allPatients.sublist(
-      startIndex, 
-      endIndex > _allPatients.length ? _allPatients.length : endIndex
-    );
-    
-    if (_currentPage == 1) {
-      _displayedPatients = newItems;
-    } else {
-      _displayedPatients.addAll(newItems);
-    }
-    
-    _hasMore = endIndex < _allPatients.length;
-  }
-  
-  // Load more patients
-  Future<void> loadMorePatients() async {
-    if (_isLoadingMore || !_hasMore || _searchQuery.isNotEmpty || 
-        _selectedDate != null || _selectedDateRange != null) return;
-    
-    _isLoadingMore = true;
-    notifyListeners();
-    
-    await Future.delayed(Duration(milliseconds: 500));
-    
-    try {
-      _currentPage++;
-      _paginateLocally();
-    } catch (e) {
-      _currentPage--;
-    } finally {
-      _isLoadingMore = false;
-      notifyListeners();
-    }
-  }
-  
-  // Search functionality
+  // ⚡ OPTIMIZED: Immediate search update
   void updateSearch(String query) {
     _searchQuery = query;
+    _updateFilteredPatients();
     notifyListeners();
+  }
+  
+  Future<bool> addPatient({
+    required String name,
+    required String executive,
+    required String payment,
+    required String phone,
+    required String address,
+    required double totalAmount,
+    required double discountAmount,
+    required double advanceAmount,
+    required double balanceAmount,
+    required String dateNdTime,
+    required String male,
+    required String female,
+    required String branch,
+    required String treatments,
+  }) async {
+    try {
+      String cleanDate = '';
+      if (dateNdTime.isNotEmpty) {
+        try {
+          DateTime dt = DateTime.parse(dateNdTime);
+          cleanDate = '${dt.day}/${dt.month}/${dt.year}-${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')} ${dt.hour >= 12 ? "PM" : "AM"}';
+        } catch (e) {
+          DateTime now = DateTime.now();
+          cleanDate = '${now.day}/${now.month}/${now.year}-${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')} ${now.hour >= 12 ? "PM" : "AM"}';
+        }
+      }
+      
+      Map<String, String> patientData = {
+        'name': name.trim(),
+        'excecutive': executive.trim(),
+        'payment': payment.trim(),
+        'phone': phone.trim(),
+        'address': address.trim(),
+        'total_amount': totalAmount.toInt().toString(),
+        'discount_amount': discountAmount.toInt().toString(),
+        'advance_amount': advanceAmount.toInt().toString(),
+        'balance_amount': balanceAmount.toInt().toString(),
+        'date_nd_time': cleanDate,
+        'male': male,
+        'female': female,
+        'branch': branch.trim(),
+        'treatments': treatments.trim(),
+      };
+      
+      bool success = await _apiService.addPatient(patientData);
+      
+      if (success) {
+        // ⚡ OPTIMIZED: Only refresh if successful
+        _needsRefresh = true;
+        await fetchPatients(refresh: true);
+        return true;
+      } else {
+        _error = 'Failed to add patient';
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _error = 'Failed to add patient: ${e.toString()}';
+      notifyListeners();
+      return false;
+    }
+  }
+  
+  Future<void> loadMorePatients() async {
+    // Simplified - not needed with current implementation
+    return;
   }
   
   void clearError() {
@@ -289,5 +298,11 @@ class PatientProvider extends ChangeNotifier {
   
   Future<void> refreshData() async {
     await fetchPatients(refresh: true);
+  }
+  
+  @override
+  void dispose() {
+    _searchDebouncer?.cancel();
+    super.dispose();
   }
 }
