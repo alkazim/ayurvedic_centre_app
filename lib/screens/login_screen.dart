@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/login_provider.dart';
 import 'home_screen.dart';
+import 'dart:ui';
+
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -31,27 +33,27 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _handleLogin() async {
     print('🔄 Starting login process...');
-    
+
     final loginProvider = context.read<LoginProvider>();
-    
+
     // Add null checks
     String username = _usernameController.text.trim();
     String password = _passwordController.text.trim();
-    
+
     if (username.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Please enter username and password')),
       );
       return;
     }
-    
+
     bool success = await loginProvider.login(username, password);
-    
+
     print('📊 Login result: $success');
-    
+
     if (success) {
       print('✅ Login successful, navigating to home...');
-      
+
       // Use mounted check
       if (mounted) {
         print('🔄 Widget is mounted, starting navigation...');
@@ -69,7 +71,7 @@ class _LoginScreenState extends State<LoginScreen> {
     final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
     final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
-    
+
     return Scaffold(
       resizeToAvoidBottomInset: true, // Important for keyboard handling
       body: SafeArea(
@@ -86,13 +88,57 @@ class _LoginScreenState extends State<LoginScreen> {
                   Container(
                     height: screenHeight * 0.22, // 22% of screen height
                     width: double.infinity,
-                    color: Colors.green,
-                    child: Image.asset(
-                      'lib/assets/images/Login_Image.png',
-                      fit: BoxFit.cover,
+                    child: Stack(
+                      children: [
+                        // Background Image with Blur
+                        Positioned.fill(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              image: DecorationImage(
+                                image: AssetImage(
+                                  'lib/assets/images/Login_Image.png',
+                                ),
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                            child: Container(
+                              color: Colors.black.withOpacity(
+                                0.2,
+                              ), // Slight dark overlay
+                            ),
+                          ),
+                        ),
+
+                        // Centered Logo
+                        Center(
+                          child: Container(
+                            width: 100,
+                            height: 100,
+                            decoration: BoxDecoration(
+                             // color: Colors.white.withOpacity(0.9),
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.3),
+                                  spreadRadius: 2,
+                                  blurRadius: 8,
+                                  offset: Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: Padding(
+                              padding: EdgeInsets.all(15),
+                              child: Image.asset(
+                                'lib/assets/images/logo.png',
+                                fit: BoxFit.contain,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  
+
                   // Title Section
                   Container(
                     padding: EdgeInsets.symmetric(
@@ -110,12 +156,14 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                   ),
-                  
+
                   SizedBox(height: screenHeight * 0.02),
-                  
+
                   // Email Field
                   Container(
-                    padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.05),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: screenWidth * 0.05,
+                    ),
                     width: double.infinity,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -143,7 +191,9 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           height: screenHeight * 0.06, // Responsive height
                           child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12.0,
+                            ),
                             child: TextField(
                               controller: _usernameController,
                               style: TextStyle(fontSize: screenWidth * 0.04),
@@ -154,7 +204,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                   fontSize: screenWidth * 0.035,
                                   color: Colors.grey.shade600,
                                 ),
-                                contentPadding: EdgeInsets.symmetric(vertical: 15),
+                                contentPadding: EdgeInsets.symmetric(
+                                  vertical: 15,
+                                ),
                               ),
                             ),
                           ),
@@ -162,12 +214,14 @@ class _LoginScreenState extends State<LoginScreen> {
                       ],
                     ),
                   ),
-                  
+
                   SizedBox(height: screenHeight * 0.02),
-                  
+
                   // Password Field
                   Container(
-                    padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.05),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: screenWidth * 0.05,
+                    ),
                     width: double.infinity,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -195,7 +249,9 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           height: screenHeight * 0.06, // Responsive height
                           child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12.0,
+                            ),
                             child: TextField(
                               controller: _passwordController,
                               obscureText: true,
@@ -207,7 +263,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                   fontSize: screenWidth * 0.035,
                                   color: Colors.grey.shade600,
                                 ),
-                                contentPadding: EdgeInsets.symmetric(vertical: 15),
+                                contentPadding: EdgeInsets.symmetric(
+                                  vertical: 15,
+                                ),
                               ),
                             ),
                           ),
@@ -215,19 +273,23 @@ class _LoginScreenState extends State<LoginScreen> {
                       ],
                     ),
                   ),
-                  
+
                   SizedBox(height: screenHeight * 0.02),
-                  
+
                   // Error message
                   Consumer<LoginProvider>(
                     builder: (context, loginProvider, child) {
                       if (loginProvider.error != null) {
                         return Padding(
-                          padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.05),
+                          padding: EdgeInsets.symmetric(
+                            horizontal: screenWidth * 0.05,
+                          ),
                           child: Container(
                             width: double.infinity,
                             padding: EdgeInsets.all(12),
-                            margin: EdgeInsets.only(bottom: screenHeight * 0.02),
+                            margin: EdgeInsets.only(
+                              bottom: screenHeight * 0.02,
+                            ),
                             decoration: BoxDecoration(
                               color: Colors.red.shade50,
                               borderRadius: BorderRadius.circular(8),
@@ -247,17 +309,23 @@ class _LoginScreenState extends State<LoginScreen> {
                       return SizedBox.shrink();
                     },
                   ),
+
                   
+
                   // Login Button
                   Padding(
-                    padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.05),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: screenWidth * 0.05,
+                    ),
                     child: Container(
                       height: screenHeight * 0.06,
                       width: double.infinity,
                       child: Consumer<LoginProvider>(
                         builder: (context, loginProvider, child) {
                           return ElevatedButton(
-                            onPressed: loginProvider.isLoading ? null : _handleLogin,
+                            onPressed: loginProvider.isLoading
+                                ? null
+                                : _handleLogin,
                             style: ElevatedButton.styleFrom(
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(8.52),
@@ -287,12 +355,10 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                   ),
-                  
+
                   // Spacer to push footer to bottom
-                  Expanded(
-                    child: Container(),
-                  ),
-                  
+                  Expanded(child: Container()),
+
                   // Footer Terms - Always at bottom
                   Container(
                     width: double.infinity,
@@ -307,7 +373,8 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         children: [
                           TextSpan(
-                            text: "By creating or logging into an account you are agreeing with our ",
+                            text:
+                                "By creating or logging into an account you are agreeing with our ",
                             style: TextStyle(
                               fontWeight: FontWeight.w400,
                               fontFamily: 'Poppins',
@@ -332,7 +399,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                   ),
-                  
+
                   // Bottom padding for safe area
                   SizedBox(height: MediaQuery.of(context).padding.bottom),
                 ],
