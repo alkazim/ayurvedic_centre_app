@@ -10,9 +10,10 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMixin {
+class _HomeScreenState extends State<HomeScreen>
+    with AutomaticKeepAliveClientMixin {
   final TextEditingController _searchController = TextEditingController();
-  
+
   // Keep alive to prevent rebuilds
   @override
   bool get wantKeepAlive => true;
@@ -21,7 +22,7 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
   void initState() {
     super.initState();
     print('🏠 HomeScreen: initState called');
-    
+
     // ⚡ OPTIMIZED: Only fetch if data doesn't exist
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final provider = context.read<PatientProvider>();
@@ -37,10 +38,103 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
     super.dispose();
   }
 
+  // Add this method to _HomeScreenState class
+void _showLogoutDialog(BuildContext context) {
+  showDialog(
+    context: context,
+    builder: (BuildContext context) {
+      return AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: Row(
+          children: [
+            Icon(
+              Icons.logout,
+              color: Colors.red.shade600,
+              size: 28,
+            ),
+            SizedBox(width: 12),
+            Text(
+              'Logout',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+                color: Colors.black87,
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          'Are you sure you want to logout?',
+          style: TextStyle(
+            fontSize: 16,
+            color: Colors.black54,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'Cancel',
+              style: TextStyle(
+                color: Colors.grey.shade600,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => _handleLogout(context),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red.shade600,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: Text(
+              'Logout',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      );
+    },
+  );
+}
+
+// Handle logout functionality
+// Handle logout functionality (simplified - no clearData call)
+// Handle logout functionality - navigate to login screen
+void _handleLogout(BuildContext context) {
+  try {
+    // Close the dialog first
+    Navigator.pop(context);
+    
+    // Navigate to login screen and clear all routes
+    Navigator.pushNamedAndRemoveUntil(
+      context,
+      '/login', // Navigate to login screen (not '/')
+      (route) => false, // Remove all previous routes
+    );
+    
+    print('✅ User logged out - navigated to login screen');
+  } catch (e) {
+    print('❌ Logout error: $e');
+    // If there's an error, try alternative navigation
+    Navigator.pushReplacementNamed(context, '/login');
+  }
+}
+
+
+
+
   // ⚡ OPTIMIZED: Cached date picker
   Future<void> _showDatePicker() async {
     final provider = context.read<PatientProvider>();
-    
+
     DateTime? selectedDate = await showDatePicker(
       context: context,
       initialDate: provider.selectedDate ?? DateTime.now(),
@@ -61,7 +155,7 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
         );
       },
     );
-    
+
     if (selectedDate != null) {
       provider.filterByDate(selectedDate);
     }
@@ -106,13 +200,15 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
               ],
             ),
           ),
-          
+
           const SizedBox(height: 6),
-          
+
           Padding(
             padding: const EdgeInsets.only(left: 25),
             child: Text(
-              patient.treatments.isNotEmpty ? patient.treatments : 'No treatments',
+              patient.treatments.isNotEmpty
+                  ? patient.treatments
+                  : 'No treatments',
               style: TextStyle(
                 fontFamily: 'Poppins',
                 fontSize: 14,
@@ -120,17 +216,23 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
               ),
             ),
           ),
-          
+
           const SizedBox(height: 12),
-          
+
           Padding(
             padding: const EdgeInsets.only(left: 25),
             child: Row(
               children: [
-                Icon(Icons.calendar_today_outlined, size: 16, color: Colors.red.shade400),
+                Icon(
+                  Icons.calendar_today_outlined,
+                  size: 16,
+                  color: Colors.red.shade400,
+                ),
                 const SizedBox(width: 6),
                 Text(
-                  patient.dateNdTime.isNotEmpty ? patient.dateNdTime : 'No Date',
+                  patient.dateNdTime.isNotEmpty
+                      ? patient.dateNdTime
+                      : 'No Date',
                   style: TextStyle(
                     fontFamily: 'Poppins',
                     fontSize: 13,
@@ -138,11 +240,17 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
                   ),
                 ),
                 const SizedBox(width: 20),
-                Icon(Icons.person_outline, size: 16, color: Colors.red.shade400),
+                Icon(
+                  Icons.person_outline,
+                  size: 16,
+                  color: Colors.red.shade400,
+                ),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
-                    patient.executive.isNotEmpty ? patient.executive : 'No Executive',
+                    patient.executive.isNotEmpty
+                        ? patient.executive
+                        : 'No Executive',
                     style: TextStyle(
                       fontFamily: 'Poppins',
                       fontSize: 13,
@@ -153,21 +261,22 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
               ],
             ),
           ),
-          
+
           const SizedBox(height: 12),
           Container(
             height: 1.5,
             width: double.infinity,
             color: Color(0xFFc1c1c1),
           ),
-          
+
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
+              // In home_screen.dart, replace the popup with navigation
               GestureDetector(
                 onTap: () {
                   print('View details for: ${patient.name}');
-                  // Navigate to patient details screen
+                  Navigator.pushNamed(context, '/invoice', arguments: patient);
                 },
                 child: Row(
                   children: const [
@@ -184,7 +293,11 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
                       ),
                     ),
                     SizedBox(width: 6),
-                    Icon(Icons.arrow_forward_ios, size: 14, color: Colors.green),
+                    Icon(
+                      Icons.arrow_forward_ios,
+                      size: 14,
+                      color: Colors.green,
+                    ),
                   ],
                 ),
               ),
@@ -198,23 +311,61 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
   @override
   Widget build(BuildContext context) {
     super.build(context); // Required for AutomaticKeepAliveClientMixin
-    
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Navigator.pop(context),
+  backgroundColor: Colors.white,
+  elevation: 0,
+  leading: IconButton(
+    icon: const Icon(Icons.arrow_back, color: Colors.black),
+    onPressed: () => Navigator.pop(context),
+  ),
+  // Add title if you want
+  title: const Text(
+    'Home',
+    style: TextStyle(
+      color: Colors.black,
+      fontSize: 20,
+      fontWeight: FontWeight.w600,
+    ),
+  ),
+  actions: [
+    // Logout Button
+    Container(
+      margin: EdgeInsets.only(right: 8),
+      child: TextButton.icon(
+        onPressed: () => _showLogoutDialog(context),
+        icon: Icon(
+          Icons.logout,
+          color: Colors.red.shade600,
+          size: 20,
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications_outlined, color: Colors.black),
-            onPressed: () {},
+        label: Text(
+          'Logout',
+          style: TextStyle(
+            color: Colors.red.shade600,
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
           ),
-        ],
+        ),
+        style: TextButton.styleFrom(
+          backgroundColor: Colors.red.shade50,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
+          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        ),
       ),
+    ),
+    // Notifications Button
+    IconButton(
+      icon: const Icon(Icons.notifications_outlined, color: Colors.black),
+      onPressed: () {},
+    ),
+  ],
+),
+
       body: RefreshIndicator(
         onRefresh: () => context.read<PatientProvider>().refreshData(),
         child: Padding(
@@ -223,7 +374,9 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
             children: [
               // Search Bar
               Container(
-                decoration: BoxDecoration(borderRadius: BorderRadius.circular(12)),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 child: Row(
                   children: [
                     Expanded(
@@ -231,20 +384,32 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
                         height: 45,
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.all(Radius.circular(8)),
-                          border: Border.all(color: Color(0xFFb3b3b3))
+                          border: Border.all(color: Color(0xFFb3b3b3)),
                         ),
                         child: TextField(
                           controller: _searchController,
                           onChanged: (value) {
                             // ⚡ OPTIMIZED: Debounced search
-                            context.read<PatientProvider>().debouncedSearch(value);
+                            context.read<PatientProvider>().debouncedSearch(
+                              value,
+                            );
                           },
                           decoration: InputDecoration(
                             hintText: 'Search for treatments',
-                            hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 16),
+                            hintStyle: TextStyle(
+                              color: Colors.grey.shade400,
+                              fontSize: 16,
+                            ),
                             border: InputBorder.none,
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                            prefixIcon: Icon(Icons.search, color: Colors.grey.shade400, size: 24),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 16,
+                            ),
+                            prefixIcon: Icon(
+                              Icons.search,
+                              color: Colors.grey.shade400,
+                              size: 24,
+                            ),
                           ),
                         ),
                       ),
@@ -257,9 +422,14 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
                         borderRadius: BorderRadius.all(Radius.circular(8)),
                       ),
                       child: TextButton(
-                        onPressed: () {/* Search handled in onChanged */},
+                        onPressed: () {
+                          /* Search handled in onChanged */
+                        },
                         style: TextButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 16,
+                          ),
                           shape: const RoundedRectangleBorder(
                             borderRadius: BorderRadius.all(Radius.circular(8)),
                           ),
@@ -277,7 +447,7 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
                   ],
                 ),
               ),
-              
+
               const SizedBox(height: 16),
 
               // ⚡ OPTIMIZED: Use Selector for date filter only
@@ -286,7 +456,7 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
                   const Text(
                     'Sort by :',
                     style: TextStyle(
-                      fontSize: 16, 
+                      fontSize: 16,
                       fontWeight: FontWeight.w500,
                       color: Colors.black87,
                     ),
@@ -306,12 +476,17 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
                               decoration: BoxDecoration(
                                 border: Border.all(color: Colors.grey.shade300),
                                 borderRadius: BorderRadius.circular(25),
-                                color: selectedDate != null ? Colors.green.shade50 : Colors.white,
+                                color: selectedDate != null
+                                    ? Colors.green.shade50
+                                    : Colors.white,
                               ),
                               child: Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 5),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 5,
+                                ),
                                 child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
                                   children: [
                                     Padding(
                                       padding: const EdgeInsets.all(10),
@@ -332,13 +507,21 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
                                       children: [
                                         if (selectedDate != null) ...[
                                           GestureDetector(
-                                            onTap: () => context.read<PatientProvider>().clearDateFilter(),
-                                            child: Icon(Icons.clear, color: Colors.red.shade400, size: 16),
+                                            onTap: () => context
+                                                .read<PatientProvider>()
+                                                .clearDateFilter(),
+                                            child: Icon(
+                                              Icons.clear,
+                                              color: Colors.red.shade400,
+                                              size: 16,
+                                            ),
                                           ),
                                           SizedBox(width: 4),
                                         ],
                                         Icon(
-                                          selectedDate != null ? Icons.calendar_today : Icons.keyboard_arrow_down,
+                                          selectedDate != null
+                                              ? Icons.calendar_today
+                                              : Icons.keyboard_arrow_down,
                                           color: Colors.green.shade600,
                                           size: 24,
                                         ),
@@ -357,9 +540,13 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
               ),
 
               SizedBox(height: 10),
-              Container(width: double.infinity, height: 2, color: Color(0xfff1f1f1)),
+              Container(
+                width: double.infinity,
+                height: 2,
+                color: Color(0xfff1f1f1),
+              ),
               const SizedBox(height: 20),
-              
+
               // ⚡ OPTIMIZED: Efficient list with Selector
               Expanded(
                 child: Selector<PatientProvider, bool>(
@@ -367,7 +554,9 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
                   builder: (context, isLoading, child) {
                     if (isLoading) {
                       return const Center(
-                        child: CircularProgressIndicator(color: Color(0xFF006837)),
+                        child: CircularProgressIndicator(
+                          color: Color(0xFF006837),
+                        ),
                       );
                     }
 
@@ -379,17 +568,34 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Icon(Icons.error_outline, size: 60, color: Colors.red),
+                                Icon(
+                                  Icons.error_outline,
+                                  size: 60,
+                                  color: Colors.red,
+                                ),
                                 SizedBox(height: 16),
-                                Text('Error: $error', textAlign: TextAlign.center, style: TextStyle(color: Colors.red)),
+                                Text(
+                                  'Error: $error',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(color: Colors.red),
+                                ),
                                 SizedBox(height: 16),
                                 ElevatedButton(
                                   onPressed: () {
-                                    context.read<PatientProvider>().clearError();
-                                    context.read<PatientProvider>().fetchPatients(refresh: true);
+                                    context
+                                        .read<PatientProvider>()
+                                        .clearError();
+                                    context
+                                        .read<PatientProvider>()
+                                        .fetchPatients(refresh: true);
                                   },
-                                  style: ElevatedButton.styleFrom(backgroundColor: Color(0xFF006837)),
-                                  child: Text('Retry', style: TextStyle(color: Colors.white)),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Color(0xFF006837),
+                                  ),
+                                  child: Text(
+                                    'Retry',
+                                    style: TextStyle(color: Colors.white),
+                                  ),
                                 ),
                               ],
                             ),
@@ -404,9 +610,19 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
                                 child: Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    Icon(Icons.people_outline, size: 80, color: Colors.grey),
+                                    Icon(
+                                      Icons.people_outline,
+                                      size: 80,
+                                      color: Colors.grey,
+                                    ),
                                     SizedBox(height: 16),
-                                    Text('No patients found', style: TextStyle(fontSize: 18, color: Colors.grey)),
+                                    Text(
+                                      'No patients found',
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        color: Colors.grey,
+                                      ),
+                                    ),
                                   ],
                                 ),
                               );
@@ -417,7 +633,10 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
                               cacheExtent: 1000, // Cache more items
                               itemCount: patients.length,
                               itemBuilder: (context, index) {
-                                return _buildPatientCard(patients[index], index);
+                                return _buildPatientCard(
+                                  patients[index],
+                                  index,
+                                );
                               },
                             );
                           },
@@ -427,7 +646,7 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
                   },
                 ),
               ),
-              
+
               // Register Now Button
               Container(
                 width: double.infinity,
@@ -437,11 +656,17 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Color(0xFF006837),
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                   ),
                   child: const Text(
                     'Register Now',
-                    style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600),
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ),

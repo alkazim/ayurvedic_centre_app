@@ -121,6 +121,86 @@ class ApiService {
     }
   }
 
+  // ⚡ NEW: Get branches from API
+  Future<List<Branch>> getBranches() async {
+    try {
+      print('🔄 Loading branches from BranchList API...');
+      
+      final response = await http.get(
+        Uri.parse('$baseUrl/BranchList'),
+        headers: headers,
+      ).timeout(Duration(seconds: 30));
+      
+      print('📊 BranchList Response Status: ${response.statusCode}');
+      print('📝 BranchList Response: ${response.body}');
+      
+      if (response.statusCode == 200) {
+        final dynamic responseData = json.decode(response.body);
+        
+        List<dynamic> data;
+        if (responseData is List) {
+          data = responseData;
+        } else if (responseData is Map<String, dynamic>) {
+          // Handle if response is wrapped in an object
+          data = responseData['branches'] ?? responseData['data'] ?? [responseData];
+        } else {
+          throw Exception('Unexpected branch response format');
+        }
+        
+        List<Branch> branches = data.map((json) => Branch.fromJson(json)).toList();
+        print('✅ Loaded ${branches.length} branches from API');
+        return branches;
+      } else if (response.statusCode == 401) {
+        throw Exception('Session expired. Please login again.');
+      } else {
+        throw Exception('Server returned ${response.statusCode}');
+      }
+    } catch (e) {
+      print('❌ Get Branches Error: $e');
+      throw Exception('Error loading branches: $e');
+    }
+  }
+
+  // ⚡ NEW: Get treatments from API
+  Future<List<Treatment>> getTreatments() async {
+    try {
+      print('🔄 Loading treatments from TreatmentList API...');
+      
+      final response = await http.get(
+        Uri.parse('$baseUrl/TreatmentList'),
+        headers: headers,
+      ).timeout(Duration(seconds: 30));
+      
+      print('📊 TreatmentList Response Status: ${response.statusCode}');
+      print('📝 TreatmentList Response: ${response.body}');
+      
+      if (response.statusCode == 200) {
+        final dynamic responseData = json.decode(response.body);
+        
+        List<dynamic> data;
+        if (responseData is List) {
+          data = responseData;
+        } else if (responseData is Map<String, dynamic>) {
+          // Handle if response is wrapped in an object
+          data = responseData['treatments'] ?? responseData['data'] ?? [responseData];
+        } else {
+          throw Exception('Unexpected treatment response format');
+        }
+        
+        List<Treatment> treatments = data.map((json) => Treatment.fromJson(json)).toList();
+        print('✅ Loaded ${treatments.length} treatments from API');
+        return treatments;
+      } else if (response.statusCode == 401) {
+        throw Exception('Session expired. Please login again.');
+      } else {
+        throw Exception('Server returned ${response.statusCode}');
+      }
+    } catch (e) {
+      print('❌ Get Treatments Error: $e');
+      throw Exception('Error loading treatments: $e');
+    }
+  }
+
   Future<bool> addPatient(Map<String, String> patientData) async {
     try {
       print('🚀 ApiService: Adding patient (${kIsWeb ? "Web" : "Mobile"})');

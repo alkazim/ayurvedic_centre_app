@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/patient_provider.dart';
+import '../services/api_service.dart';
+import '../models/patient_model.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({Key? key}) : super(key: key);
@@ -26,152 +28,128 @@ class _RegisterScreenState extends State<RegisterScreen> {
   TimeOfDay? treatmentTime;
   
   bool _isLoading = false;
+  bool _isLoadingBranches = false;
+  bool _isLoadingTreatments = false;
   
-  // Predefined location options
-  final List<String> _locationOptions = [
-    'Kochi, Kerala',
-    'Calicut, Kerala',
-    'Thrissur, Kerala',
-    'Trivandrum, Kerala',
-    'Kottayam, Kerala',
-    'Alappuzha, Kerala',
-    'Palakkad, Kerala',
-    'Kannur, Kerala',
-  ];
+  // ⚡ API Data Lists
+  List<Branch> _branches = [];
+  List<Treatment> _apiTreatments = [];
+  Branch? _selectedBranch;
+  Treatment? _selectedApiTreatment;
   
-  // Branch options based on location
-  final Map<String, List<String>> _branchOptions = {
-    'Kochi, Kerala': [
-      'Kochi Main Branch',
-      'Ernakulam Branch', 
-      'Kakkanad Branch',
-      'Edapally Branch',
-    ],
-    'Calicut, Kerala': [
-      'Calicut Central Branch',
-      'Kozhikode Branch',
-      'Mavoor Branch',
-    ],
-    'Thrissur, Kerala': [
-      'Thrissur Main Branch',
-      'Kunnamkulam Branch',
-      'Guruvayur Branch',
-    ],
-    'Trivandrum, Kerala': [
-      'Trivandrum Central Branch',
-      'Neyyattinkara Branch',
-      'Attingal Branch',
-    ],
-    'Kottayam, Kerala': [
-      'Kottayam Main Branch',
-      'Kumarakom Branch',
-      'Changanassery Branch',
-    ],
-    'Alappuzha, Kerala': [
-      'Alappuzha Main Branch',
-      'Cherthala Branch',
-    ],
-    'Palakkad, Kerala': [
-      'Palakkad Main Branch',
-      'Ottapalam Branch',
-    ],
-    'Kannur, Kerala': [
-      'Kannur Main Branch',
-      'Thalassery Branch',
-    ],
-  };
-  
-  // Time slot options
+  // Time slot options (keep this static)
   final List<String> _timeSlots = [
-    '09:00 AM',
-    '09:30 AM', 
-    '10:00 AM',
-    '10:30 AM',
-    '11:00 AM',
-    '11:30 AM',
-    '12:00 PM',
-    '12:30 PM',
-    '02:00 PM',
-    '02:30 PM',
-    '03:00 PM',
-    '03:30 PM',
-    '04:00 PM',
-    '04:30 PM',
-    '05:00 PM',
-    '05:30 PM',
-    '06:00 PM',
+    '09:00 AM', '09:30 AM', '10:00 AM', '10:30 AM',
+    '11:00 AM', '11:30 AM', '12:00 PM', '12:30 PM',
+    '02:00 PM', '02:30 PM', '03:00 PM', '03:30 PM',
+    '04:00 PM', '04:30 PM', '05:00 PM', '05:30 PM', '06:00 PM',
   ];
   
-  // Predefined treatment options
-  final List<TreatmentOption> _treatmentOptions = [
-    TreatmentOption(
-      name: 'Couple Combo Package',
-      description: 'Full body rejuvenation therapy for couples',
-      price: 2500,
-      duration: '90 minutes',
-    ),
-    TreatmentOption(
-      name: 'Panchakarma Treatment',
-      description: 'Traditional detoxification and rejuvenation',
-      price: 4000,
-      duration: '120 minutes',
-    ),
-    TreatmentOption(
-      name: 'Full Body Massage',
-      description: 'Therapeutic oil massage for relaxation',
-      price: 1800,
-      duration: '60 minutes',
-    ),
-    TreatmentOption(
-      name: 'Head & Neck Massage',
-      description: 'Stress relief therapy for head and neck',
-      price: 800,
-      duration: '30 minutes',
-    ),
-    TreatmentOption(
-      name: 'Herbal Steam Therapy',
-      description: 'Detoxifying herbal steam treatment',
-      price: 1200,
-      duration: '45 minutes',
-    ),
-    TreatmentOption(
-      name: 'Foot Massage',
-      description: 'Relaxing therapeutic foot massage',
-      price: 600,
-      duration: '30 minutes',
-    ),
-  ];
-  
-  List<Treatment> treatments = [];
+  List<PatientTreatment> treatments = [];
+  final ApiService _apiService = ApiService();
 
   @override
   void initState() {
     super.initState();
+    
+    // ⚡ Load API data on init
+    _loadBranches();
+    _loadTreatments();
+    
     // Get treatment from navigation arguments if available
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final String? treatmentFromHome = ModalRoute.of(context)?.settings.arguments as String?;
       if (treatmentFromHome != null) {
-        // FIXED: Find the treatment option using where().isNotEmpty instead of firstOrNull
-        var matchingTreatments = _treatmentOptions.where((t) => t.name == treatmentFromHome);
-        
-        if (matchingTreatments.isNotEmpty) {
-          TreatmentOption selectedTreatmentOption = matchingTreatments.first;
-          setState(() {
-            treatments = [Treatment(
-              name: selectedTreatmentOption.name,
-              price: selectedTreatmentOption.price,
-              maleCount: 1, 
-              femaleCount: 1
-            )];
-            _calculateTotalAmount();
-          });
-        }
+        // Find matching treatment from API
+        _findAndAddTreatmentFromHome(treatmentFromHome);
       }
     });
 
     // Add listeners for automatic calculations
     advanceController.addListener(_calculateBalanceAmount);
     discountController.addListener(_calculateBalanceAmount);
+  }
+
+  // ⚡ Load branches from API
+  Future<void> _loadBranches() async {
+    setState(() {
+      _isLoadingBranches = true;
+    });
+    
+    try {
+      print('🔄 Loading branches from API...');
+      List<Branch> branches = await _apiService.getBranches();
+      setState(() {
+        _branches = branches;
+        print('✅ Loaded ${branches.length} branches');
+      });
+    } catch (e) {
+      print('❌ Error loading branches: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error loading branches: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      setState(() {
+        _isLoadingBranches = false;
+      });
+    }
+  }
+
+  // ⚡ Load treatments from API
+  Future<void> _loadTreatments() async {
+    setState(() {
+      _isLoadingTreatments = true;
+    });
+    
+    try {
+      print('🔄 Loading treatments from API...');
+      List<Treatment> apiTreatments = await _apiService.getTreatments();
+      setState(() {
+        _apiTreatments = apiTreatments;
+        print('✅ Loaded ${apiTreatments.length} treatments');
+      });
+    } catch (e) {
+      print('❌ Error loading treatments: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error loading treatments: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      setState(() {
+        _isLoadingTreatments = false;
+      });
+    }
+  }
+
+  // Find and add treatment from home screen navigation
+  void _findAndAddTreatmentFromHome(String treatmentName) {
+    // Wait for treatments to load
+    if (_apiTreatments.isEmpty) {
+      Future.delayed(Duration(milliseconds: 500), () {
+        _findAndAddTreatmentFromHome(treatmentName);
+      });
+      return;
+    }
+    
+    var matchingTreatments = _apiTreatments.where((t) => t.name == treatmentName);
+    
+    if (matchingTreatments.isNotEmpty) {
+      Treatment selectedTreatment = matchingTreatments.first;
+      setState(() {
+        treatments = [PatientTreatment(
+          name: selectedTreatment.name,
+          price: selectedTreatment.price.toInt(),
+          maleCount: 1,
+          femaleCount: 1
+        )];
+        _calculateTotalAmount();
+      });
+    }
   }
 
   @override
@@ -191,7 +169,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   // Calculate total amount based on selected treatments
   void _calculateTotalAmount() {
     double total = 0;
-    for (Treatment treatment in treatments) {
+    for (PatientTreatment treatment in treatments) {
       total += treatment.price * (treatment.maleCount + treatment.femaleCount);
     }
     
@@ -209,7 +187,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     
     double balanceAmount = (totalAmount - discountAmount) - advanceAmount;
     
-    // Ensure balance is not negative
     if (balanceAmount < 0) {
       balanceAmount = 0;
     }
@@ -224,8 +201,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (nameController.text.trim().isEmpty) return false;
     if (whatsappController.text.trim().isEmpty) return false;
     if (addressController.text.trim().isEmpty) return false;
-    if (selectedLocation == 'Choose your location') return false;
-    if (selectedBranch == 'Select the branch') return false;
+    if (_selectedBranch == null) return false;
     if (treatments.isEmpty) return false;
     if (totalAmountController.text.trim().isEmpty) return false;
     if (paymentMethod.isEmpty) return false;
@@ -257,10 +233,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           ),
           content: Text(
             'Please fill all the required fields before saving.',
-            style: TextStyle(
-              fontSize: 16,
-              color: Colors.black54,
-            ),
+            style: TextStyle(fontSize: 16, color: Colors.black54),
           ),
           actions: [
             TextButton(
@@ -279,59 +252,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  // Show location selection dialog
-  void _showLocationDialog() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Text(
-            'Select Location',
-            style: TextStyle(
-              fontWeight: FontWeight.w600,
-              fontSize: 18,
-              color: Color(0xFF006837),
-            ),
-          ),
-          content: Container(
-            width: double.maxFinite,
-            child: ListView.builder(
-              shrinkWrap: true,
-              itemCount: _locationOptions.length,
-              itemBuilder: (context, index) {
-                return ListTile(
-                  leading: Icon(Icons.location_on, color: Color(0xFF006837)),
-                  title: Text(_locationOptions[index]),
-                  onTap: () {
-                    setState(() {
-                      selectedLocation = _locationOptions[index];
-                      selectedBranch = 'Select the branch'; // Reset branch
-                    });
-                    Navigator.pop(context);
-                  },
-                );
-              },
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  // Show branch selection dialog
+  // ⚡ Show branch selection dialog with API data
   void _showBranchDialog() {
-    if (selectedLocation == 'Choose your location') {
+    if (_branches.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Please select location first'),
+          content: Text('Loading branches... Please try again.'),
           backgroundColor: Colors.orange,
         ),
       );
       return;
     }
-
-    List<String> branches = _branchOptions[selectedLocation] ?? [];
 
     showDialog(
       context: context,
@@ -348,22 +279,28 @@ class _RegisterScreenState extends State<RegisterScreen> {
           ),
           content: Container(
             width: double.maxFinite,
-            child: ListView.builder(
-              shrinkWrap: true,
-              itemCount: branches.length,
-              itemBuilder: (context, index) {
-                return ListTile(
-                  leading: Icon(Icons.business, color: Color(0xFF006837)),
-                  title: Text(branches[index]),
-                  onTap: () {
-                    setState(() {
-                      selectedBranch = branches[index];
-                    });
-                    Navigator.pop(context);
-                  },
-                );
-              },
-            ),
+            height: 300,
+            child: _isLoadingBranches
+                ? Center(child: CircularProgressIndicator(color: Color(0xFF006837)))
+                : ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: _branches.length,
+                    itemBuilder: (context, index) {
+                      Branch branch = _branches[index];
+                      return ListTile(
+                        leading: Icon(Icons.business, color: Color(0xFF006837)),
+                        title: Text(branch.name),
+                        subtitle: branch.location.isNotEmpty ? Text(branch.location) : null,
+                        onTap: () {
+                          setState(() {
+                            _selectedBranch = branch;
+                            selectedBranch = branch.name;
+                          });
+                          Navigator.pop(context);
+                        },
+                      );
+                    },
+                  ),
           ),
         );
       },
@@ -399,7 +336,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
               itemBuilder: (context, index) {
                 return GestureDetector(
                   onTap: () {
-                    // Convert string to TimeOfDay
                     String timeString = _timeSlots[index];
                     List<String> parts = timeString.split(' ');
                     List<String> timeParts = parts[0].split(':');
@@ -456,14 +392,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
     try {
       final patientProvider = context.read<PatientProvider>();
       
-      // Prepare treatment string
       String treatmentString = treatments.map((t) => t.name).join(', ');
-      
-      // Prepare male and female counts
       int totalMale = treatments.fold(0, (sum, treatment) => sum + treatment.maleCount);
       int totalFemale = treatments.fold(0, (sum, treatment) => sum + treatment.femaleCount);
       
-      // Format date and time
       String formattedDateTime = '';
       if (treatmentDate != null) {
         formattedDateTime = '${treatmentDate!.year}-${treatmentDate!.month.toString().padLeft(2, '0')}-${treatmentDate!.day.toString().padLeft(2, '0')}';
@@ -492,75 +424,56 @@ class _RegisterScreenState extends State<RegisterScreen> {
       );
 
       if (success) {
-        // Show success snackbar
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Row(
               children: [
                 Icon(Icons.check_circle, color: Colors.white),
                 SizedBox(width: 12),
-                Text(
-                  'Patient registered successfully!',
-                  style: TextStyle(fontSize: 16),
-                ),
+                Text('Patient registered successfully!', style: TextStyle(fontSize: 16)),
               ],
             ),
             backgroundColor: Colors.green,
             duration: Duration(seconds: 3),
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           ),
         );
 
-        // Navigate back to home screen
         await Future.delayed(Duration(seconds: 1));
         Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
       } else {
-        // Show error snackbar
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Row(
               children: [
                 Icon(Icons.error, color: Colors.white),
                 SizedBox(width: 12),
-                Text(
-                  'Error occurred, try again',
-                  style: TextStyle(fontSize: 16),
-                ),
+                Text('Error occurred, try again', style: TextStyle(fontSize: 16)),
               ],
             ),
             backgroundColor: Colors.red,
             duration: Duration(seconds: 3),
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           ),
         );
       }
     } catch (e) {
       print('Error saving patient: $e');
-      // Show error snackbar
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Row(
             children: [
               Icon(Icons.error, color: Colors.white),
               SizedBox(width: 12),
-              Text(
-                'Error occurred, try again',
-                style: TextStyle(fontSize: 16),
-              ),
+              Text('Error occurred, try again', style: TextStyle(fontSize: 16)),
             ],
           ),
           backgroundColor: Colors.red,
           duration: Duration(seconds: 3),
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         ),
       );
     } finally {
@@ -607,10 +520,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
             const SizedBox(height: 20),
             _buildTextField('Address', 'Enter your full address', addressController),
             const SizedBox(height: 20),
-            _buildDropdown('Location', selectedLocation, _showLocationDialog),
+            
+            // ⚡ Updated Branch Dropdown
+            _buildDropdownWithLoading('Branch', selectedBranch, _showBranchDialog, _isLoadingBranches),
             const SizedBox(height: 20),
-            _buildDropdown('Branch', selectedBranch, _showBranchDialog),
-            const SizedBox(height: 20),
+            
             _buildTreatmentsSection(),
             const SizedBox(height: 20),
             _buildTextField('Total Amount', 'Auto-calculated', totalAmountController, readOnly: true),
@@ -631,6 +545,58 @@ class _RegisterScreenState extends State<RegisterScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  // Updated dropdown with loading indicator
+  Widget _buildDropdownWithLoading(String label, String value, VoidCallback onTap, bool isLoading) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w500,
+            color: Colors.black87,
+          ),
+        ),
+        const SizedBox(height: 8),
+        GestureDetector(
+          onTap: isLoading ? null : onTap,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            decoration: BoxDecoration(
+              color: Colors.grey[100],
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    isLoading ? 'Loading...' : value,
+                    style: TextStyle(
+                      color: value.contains('Choose') || value.contains('Select') || isLoading
+                          ? Colors.grey : Colors.black,
+                    ),
+                  ),
+                ),
+                isLoading
+                    ? SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.green),
+                        ),
+                      )
+                    : const Icon(Icons.keyboard_arrow_down, color: Colors.green),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -728,7 +694,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         const SizedBox(height: 12),
         ...treatments.asMap().entries.map((entry) {
           int index = entry.key;
-          Treatment treatment = entry.value;
+          PatientTreatment treatment = entry.value;
           return Container(
             margin: const EdgeInsets.only(bottom: 8),
             padding: const EdgeInsets.all(12),
@@ -1029,11 +995,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  // Treatment Dialog with Predefined Options
+  // ⚡ Updated Treatment Dialog with API data
   void _showTreatmentDialog() {
     int maleCount = 1;
     int femaleCount = 1;
-    TreatmentOption? selectedTreatmentOption;
+    Treatment? selectedApiTreatment;
+
+    if (_apiTreatments.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Loading treatments... Please try again.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
 
     showDialog(
       context: context,
@@ -1059,54 +1035,61 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                     const SizedBox(height: 20),
                     
-                    // Treatment Dropdown with Predefined Options
+                    // ⚡ Updated Treatment Dropdown with API data
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                       decoration: BoxDecoration(
                         color: Colors.grey[100],
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: DropdownButtonHideUnderline(
-                        child: DropdownButton<TreatmentOption>(
-                          isExpanded: true,
-                          hint: Text(
-                            'Choose preferred treatment',
-                            style: TextStyle(color: Colors.grey),
-                          ),
-                          value: selectedTreatmentOption,
-                          icon: Icon(Icons.keyboard_arrow_down, color: Colors.green),
-                          onChanged: (TreatmentOption? newValue) {
-                            setStateDialog(() {
-                              selectedTreatmentOption = newValue;
-                            });
-                          },
-                          items: _treatmentOptions.map((TreatmentOption treatment) {
-                            return DropdownMenuItem<TreatmentOption>(
-                              value: treatment,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Text(
-                                    treatment.name,
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                  Text(
-                                    '₹${treatment.price} - ${treatment.duration}',
-                                    style: TextStyle(
-                                      color: Colors.green[600],
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ],
+                      child: _isLoadingTreatments
+                          ? Container(
+                              height: 50,
+                              child: Center(
+                                child: CircularProgressIndicator(color: Colors.green),
                               ),
-                            );
-                          }).toList(),
-                        ),
-                      ),
+                            )
+                          : DropdownButtonHideUnderline(
+                              child: DropdownButton<Treatment>(
+                                isExpanded: true,
+                                hint: Text(
+                                  'Choose preferred treatment',
+                                  style: TextStyle(color: Colors.grey),
+                                ),
+                                value: selectedApiTreatment,
+                                icon: Icon(Icons.keyboard_arrow_down, color: Colors.green),
+                                onChanged: (Treatment? newValue) {
+                                  setStateDialog(() {
+                                    selectedApiTreatment = newValue;
+                                  });
+                                },
+                                items: _apiTreatments.map((Treatment treatment) {
+                                  return DropdownMenuItem<Treatment>(
+                                    value: treatment,
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Text(
+                                          treatment.name,
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.w600,
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                        Text(
+                                          '₹${treatment.price.toInt()} - ${treatment.duration}',
+                                          style: TextStyle(
+                                            color: Colors.green[600],
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                }).toList(),
+                              ),
+                            ),
                     ),
                     
                     const SizedBox(height: 24),
@@ -1134,11 +1117,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       width: double.infinity,
                       child: ElevatedButton(
                         onPressed: () {
-                          if (selectedTreatmentOption != null && (maleCount > 0 || femaleCount > 0)) {
+                          if (selectedApiTreatment != null && (maleCount > 0 || femaleCount > 0)) {
                             setState(() {
-                              treatments.add(Treatment(
-                                name: selectedTreatmentOption!.name,
-                                price: selectedTreatmentOption!.price,
+                              treatments.add(PatientTreatment(
+                                name: selectedApiTreatment!.name,
+                                price: selectedApiTreatment!.price.toInt(),
                                 maleCount: maleCount,
                                 femaleCount: femaleCount,
                               ));
@@ -1257,29 +1240,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 }
 
-// Treatment Option Model
-class TreatmentOption {
-  final String name;
-  final String description;
-  final int price;
-  final String duration;
-
-  TreatmentOption({
-    required this.name,
-    required this.description,
-    required this.price,
-    required this.duration,
-  });
-}
-
-// Updated Treatment Model with price
-class Treatment {
+// ⚡ Updated Model for Patient Treatments (to avoid conflicts)
+class PatientTreatment {
   final String name;
   final int price;
   final int maleCount;
   final int femaleCount;
 
-  Treatment({
+  PatientTreatment({
     required this.name,
     required this.price,
     required this.maleCount,
