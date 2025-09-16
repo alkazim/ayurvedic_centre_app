@@ -34,10 +34,25 @@ class Patient {
   });
 
   factory Patient.fromJson(Map<String, dynamic> json) {
+    // Extract treatments from patientdetails_set
+    String treatmentNames = '';
+    if (json['patientdetails_set'] != null) {
+      List<dynamic> treatments = json['patientdetails_set'];
+      treatmentNames = treatments
+          .map((treatment) => treatment['treatment_name'] ?? '')
+          .join(', ');
+    }
+
+    // Extract branch name
+    String branchName = '';
+    if (json['branch'] != null && json['branch']['name'] != null) {
+      branchName = json['branch']['name'];
+    }
+
     return Patient(
       id: json['id'],
       name: json['name'] ?? '',
-      executive: json['executive'] ?? '',
+      executive: json['user'] ?? '', // API uses 'user' for executive
       payment: json['payment'] ?? '',
       phone: json['phone'] ?? '',
       address: json['address'] ?? '',
@@ -46,24 +61,35 @@ class Patient {
       advanceAmount: (json['advance_amount'] ?? 0).toDouble(),
       balanceAmount: (json['balance_amount'] ?? 0).toDouble(),
       dateNdTime: json['date_nd_time'] ?? '',
-      male: json['male'] ?? '',
-      female: json['female'] ?? '',
-      branch: json['branch'] ?? '',
-      treatments: json['treatments'] ?? '',
+      male: json['patientdetails_set']?.isNotEmpty == true 
+          ? (json['patientdetails_set'][0]['male'] ?? '') 
+          : '',
+      female: json['patientdetails_set']?.isNotEmpty == true 
+          ? (json['patientdetails_set'][0]['female'] ?? '') 
+          : '',
+      branch: branchName,
+      treatments: treatmentNames,
     );
   }
 }
 
+// Keep your existing Branch and Treatment classes
 class Branch {
   final int id;
   final String name;
+  final String location;
 
-  Branch({required this.id, required this.name});
+  Branch({
+    required this.id,
+    required this.name,
+    this.location = '',
+  });
 
   factory Branch.fromJson(Map<String, dynamic> json) {
     return Branch(
       id: json['id'] ?? 0,
       name: json['name'] ?? '',
+      location: json['location'] ?? '',
     );
   }
 }
@@ -71,13 +97,22 @@ class Branch {
 class Treatment {
   final int id;
   final String name;
+  final String duration;
+  final double price;
 
-  Treatment({required this.id, required this.name});
+  Treatment({
+    required this.id,
+    required this.name,
+    this.duration = '',
+    this.price = 0.0,
+  });
 
   factory Treatment.fromJson(Map<String, dynamic> json) {
     return Treatment(
       id: json['id'] ?? 0,
       name: json['name'] ?? '',
+      duration: json['duration'] ?? '',
+      price: (json['price'] ?? 0).toDouble(),
     );
   }
 }
