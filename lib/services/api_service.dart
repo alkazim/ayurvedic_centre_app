@@ -202,35 +202,45 @@ class ApiService {
   }
 
   Future<bool> addPatient(Map<String, String> patientData) async {
-    try {
-      print('🚀 ApiService: Adding patient (${kIsWeb ? "Web" : "Mobile"})');
-      
-      Map<String, String> cleanData = Map<String, String>.from(patientData);
-      cleanData.remove('id');
-      
-      print('🔍 Clean data: $cleanData');
-      
-      var response = await http.post(
-        Uri.parse('$baseUrl/PatientUpdate'),
-        headers: formHeaders,
-        body: cleanData,
-      ).timeout(Duration(seconds: 30));
-      
-      print('📊 Response Status: ${response.statusCode}');
-      print('📝 Response: ${response.body.length > 300 ? response.body.substring(0, 300) + "..." : response.body}');
-      
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        print('✅ Patient added successfully');
-        return true;
-      }
-      
-      return false;
-      
-    } catch (e) {
-      print('❌ ApiService: Exception occurred - $e');
+  try {
+    print('🚀 ApiService: Adding patient (${kIsWeb ? "Web" : "Mobile"})');
+    
+    // Clean the data and add missing id field
+    Map<String, String> cleanData = Map<String, String>.from(patientData);
+    
+    // Add 'id' field as empty string (for new patient creation)
+    cleanData['id'] = '';
+    
+    // Remove any existing id if it's null or empty
+    if (cleanData.containsKey('id') && (cleanData['id'] == null || cleanData['id']!.isEmpty)) {
+      cleanData['id'] = '';
+    }
+    
+    print('🔍 Clean data: $cleanData');
+    
+    var response = await http.post(
+      Uri.parse('$baseUrl/PatientUpdate'),
+      headers: formHeaders,
+      body: cleanData,
+    ).timeout(Duration(seconds: 30));
+    
+    print('📊 Response Status: ${response.statusCode}');
+    print('📝 Response: ${response.body.length > 300 ? response.body.substring(0, 300) + "..." : response.body}');
+    
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      print('✅ Patient added successfully');
+      return true;
+    } else {
+      print('❌ Server error: ${response.statusCode} - ${response.body}');
       return false;
     }
+    
+  } catch (e) {
+    print('❌ ApiService: Exception occurred - $e');
+    return false;
   }
+}
+
 
   void logout() {
     _authToken = null;

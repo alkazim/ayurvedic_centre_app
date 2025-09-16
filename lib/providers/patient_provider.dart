@@ -251,6 +251,7 @@ class PatientProvider extends ChangeNotifier {
       }
       
       Map<String, String> patientData = {
+        'id':"",
         'name': name.trim(),
         'excecutive': executive.trim(),
         'payment': payment.trim(),

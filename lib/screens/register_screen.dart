@@ -1022,139 +1022,141 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
               child: Padding(
                 padding: const EdgeInsets.all(24.0),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Choose Treatment',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w600,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Choose Treatment',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 20),
-                    
-                    // ⚡ Updated Treatment Dropdown with API data
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.grey[100],
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: _isLoadingTreatments
-                          ? Container(
-                              height: 50,
-                              child: Center(
-                                child: CircularProgressIndicator(color: Colors.green),
-                              ),
-                            )
-                          : DropdownButtonHideUnderline(
-                              child: DropdownButton<Treatment>(
-                                isExpanded: true,
-                                hint: Text(
-                                  'Choose preferred treatment',
-                                  style: TextStyle(color: Colors.grey),
+                      const SizedBox(height: 20),
+                      
+                      // ⚡ Updated Treatment Dropdown with API data
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[100],
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: _isLoadingTreatments
+                            ? Container(
+                                height: 50,
+                                child: Center(
+                                  child: CircularProgressIndicator(color: Colors.green),
                                 ),
-                                value: selectedApiTreatment,
-                                icon: Icon(Icons.keyboard_arrow_down, color: Colors.green),
-                                onChanged: (Treatment? newValue) {
-                                  setStateDialog(() {
-                                    selectedApiTreatment = newValue;
-                                  });
-                                },
-                                items: _apiTreatments.map((Treatment treatment) {
-                                  return DropdownMenuItem<Treatment>(
-                                    value: treatment,
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        Text(
-                                          treatment.name,
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.w600,
-                                            fontSize: 14,
+                              )
+                            : DropdownButtonHideUnderline(
+                                child: DropdownButton<Treatment>(
+                                  isExpanded: true,
+                                  hint: Text(
+                                    'Choose preferred treatment',
+                                    style: TextStyle(color: Colors.grey),
+                                  ),
+                                  value: selectedApiTreatment,
+                                  icon: Icon(Icons.keyboard_arrow_down, color: Colors.green),
+                                  onChanged: (Treatment? newValue) {
+                                    setStateDialog(() {
+                                      selectedApiTreatment = newValue;
+                                    });
+                                  },
+                                  items: _apiTreatments.map((Treatment treatment) {
+                                    return DropdownMenuItem<Treatment>(
+                                      value: treatment,
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Text(
+                                            treatment.name,
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.w600,
+                                              fontSize: 14,
+                                            ),
                                           ),
-                                        ),
-                                        Text(
-                                          '₹${treatment.price.toInt()} - ${treatment.duration}',
-                                          style: TextStyle(
-                                            color: Colors.green[600],
-                                            fontSize: 12,
+                                          Text(
+                                            '₹${treatment.price.toInt()} - ${treatment.duration}',
+                                            style: TextStyle(
+                                              color: Colors.green[600],
+                                              fontSize: 12,
+                                            ),
                                           ),
-                                        ),
-                                      ],
-                                    ),
-                                  );
-                                }).toList(),
+                                        ],
+                                      ),
+                                    );
+                                  }).toList(),
+                                ),
                               ),
+                      ),
+                      
+                      const SizedBox(height: 24),
+                      const Text(
+                        'Add Patients',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      _buildPatientCounter('Male', maleCount, (count) {
+                        setStateDialog(() {
+                          maleCount = count;
+                        });
+                      }),
+                      const SizedBox(height: 16),
+                      _buildPatientCounter('Female', femaleCount, (count) {
+                        setStateDialog(() {
+                          femaleCount = count;
+                        });
+                      }),
+                      const SizedBox(height: 32),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: () {
+                            if (selectedApiTreatment != null && (maleCount > 0 || femaleCount > 0)) {
+                              setState(() {
+                                treatments.add(PatientTreatment(
+                                  name: selectedApiTreatment!.name,
+                                  price: selectedApiTreatment!.price.toInt(),
+                                  maleCount: maleCount,
+                                  femaleCount: femaleCount,
+                                ));
+                                _calculateTotalAmount();
+                              });
+                              Navigator.pop(context);
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Please select treatment and add patients'),
+                                  backgroundColor: Colors.orange,
+                                ),
+                              );
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.green[700],
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
                             ),
-                    ),
-                    
-                    const SizedBox(height: 24),
-                    const Text(
-                      'Add Patients',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    _buildPatientCounter('Male', maleCount, (count) {
-                      setStateDialog(() {
-                        maleCount = count;
-                      });
-                    }),
-                    const SizedBox(height: 16),
-                    _buildPatientCounter('Female', femaleCount, (count) {
-                      setStateDialog(() {
-                        femaleCount = count;
-                      });
-                    }),
-                    const SizedBox(height: 32),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: () {
-                          if (selectedApiTreatment != null && (maleCount > 0 || femaleCount > 0)) {
-                            setState(() {
-                              treatments.add(PatientTreatment(
-                                name: selectedApiTreatment!.name,
-                                price: selectedApiTreatment!.price.toInt(),
-                                maleCount: maleCount,
-                                femaleCount: femaleCount,
-                              ));
-                              _calculateTotalAmount();
-                            });
-                            Navigator.pop(context);
-                          } else {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('Please select treatment and add patients'),
-                                backgroundColor: Colors.orange,
-                              ),
-                            );
-                          }
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green[700],
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
                           ),
-                        ),
-                        child: const Text(
-                          'Save',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
+                          child: const Text(
+                            'Save',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             );

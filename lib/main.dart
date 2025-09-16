@@ -1,5 +1,6 @@
 import 'package:ayurvedic_centre_app/screens/invoice_screen.dart';
 import 'package:ayurvedic_centre_app/screens/register_screen.dart';
+import 'package:ayurvedic_centre_app/screens/splash_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'providers/patient_provider.dart';
@@ -24,13 +25,14 @@ class MyApp extends StatelessWidget {
         theme: ThemeData(
           primarySwatch: Colors.green,
         ),
-        initialRoute: '/login',
+        initialRoute: '/splash',
         routes: {
           '/': (context) => LoginScreen(),
           '/login': (context) => const LoginScreen(),
           '/home': (context) => const HomeScreen(),
           '/register': (context) => const RegisterScreen(),
           '/invoice': (context) => InvoiceScreen(),
+          '/splash': (context) => SplashScreen(),
         },
         debugShowCheckedModeBanner: false,
       ),
